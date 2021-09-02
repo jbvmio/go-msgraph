@@ -1,13 +1,5 @@
 # Golang Microsoft Graph API implementation
 
-[![Latest Release](https://img.shields.io/github/v/release/jbvmio/go-msgraph)](https://github.com/jbvmio/go-msgraph/releases)
-[![Github Actions](https://github.com/jbvmio/go-msgraph/actions/workflows/go.yml/badge.svg)](https://github.com/jbvmio/go-msgraph/actions)
-[![godoc](https://godoc.org/github.com/jbvmio/go-msgraph?status.svg)](https://godoc.org/github.com/jbvmio/go-msgraph)
-[![Go Report Card](https://goreportcard.com/badge/github.com/jbvmio/go-msgraph)](https://goreportcard.com/report/github.com/jbvmio/go-msgraph)
-[![codebeat badge](https://codebeat.co/badges/9d93c0c6-a981-42d3-97a7-bb48c296257f)](https://codebeat.co/projects/github-com-jbvmio-go-msgraph-master)
-[![codecov](https://codecov.io/gh/jbvmio/go-msgraph/branch/master/graph/badge.svg)](https://codecov.io/gh/jbvmio/go-msgraph)
-[![MIT License](https://img.shields.io/github/license/jbvmio/go-msgraph)](LICENSE)
-
 `go-msgraph` is a go lang implementation of the Microsoft Graph API. See [Overview of Microsoft Graph](https://developer.microsoft.com/en-us/graph/docs/concepts/overview)
 
 ## General

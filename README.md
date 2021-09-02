@@ -1,18 +1,20 @@
 # Golang Microsoft Graph API implementation
 
-[![Latest Release](https://img.shields.io/github/v/release/open-networks/go-msgraph)](https://github.com/open-networks/go-msgraph/releases)
-[![Github Actions](https://github.com/open-networks/go-msgraph/actions/workflows/go.yml/badge.svg)](https://github.com/open-networks/go-msgraph/actions)
-[![godoc](https://godoc.org/github.com/open-networks/go-msgraph?status.svg)](https://godoc.org/github.com/open-networks/go-msgraph)
-[![Go Report Card](https://goreportcard.com/badge/github.com/open-networks/go-msgraph)](https://goreportcard.com/report/github.com/open-networks/go-msgraph)
-[![codebeat badge](https://codebeat.co/badges/9d93c0c6-a981-42d3-97a7-bb48c296257f)](https://codebeat.co/projects/github-com-open-networks-go-msgraph-master)
-[![codecov](https://codecov.io/gh/open-networks/go-msgraph/branch/master/graph/badge.svg)](https://codecov.io/gh/open-networks/go-msgraph)
-[![MIT License](https://img.shields.io/github/license/open-networks/go-msgraph)](LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/jbvmio/go-msgraph)](https://github.com/jbvmio/go-msgraph/releases)
+[![Github Actions](https://github.com/jbvmio/go-msgraph/actions/workflows/go.yml/badge.svg)](https://github.com/jbvmio/go-msgraph/actions)
+[![godoc](https://godoc.org/github.com/jbvmio/go-msgraph?status.svg)](https://godoc.org/github.com/jbvmio/go-msgraph)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jbvmio/go-msgraph)](https://goreportcard.com/report/github.com/jbvmio/go-msgraph)
+[![codebeat badge](https://codebeat.co/badges/9d93c0c6-a981-42d3-97a7-bb48c296257f)](https://codebeat.co/projects/github-com-jbvmio-go-msgraph-master)
+[![codecov](https://codecov.io/gh/jbvmio/go-msgraph/branch/master/graph/badge.svg)](https://codecov.io/gh/jbvmio/go-msgraph)
+[![MIT License](https://img.shields.io/github/license/jbvmio/go-msgraph)](LICENSE)
 
 `go-msgraph` is a go lang implementation of the Microsoft Graph API. See [Overview of Microsoft Graph](https://developer.microsoft.com/en-us/graph/docs/concepts/overview)
 
 ## General
 
 This implementation has been written to get various user, group and calendar details out of a Microsoft Azure Active Directory. Currently only READ-access is implemented, but you are welcome to add WRITE-support to it & backmerge it.
+
+This is a fork of [open-networks/go-msgraph](https://github.com/open-networks/go-msgraph), extending functionality.
 
 ## Features
 
@@ -74,22 +76,22 @@ This project uses [Semantic versioning](https://semver.org/) with all tags prefi
 
 ## Installation
 
-I recommend to use [go modules](https://blog.golang.org/using-go-modules) and always use the latest tagged [release](https://github.com/open-networks/go-msgraph/releases). You may directly download the source code there, but the preffered way to install and update is with `go get`:
+I recommend to use [go modules](https://blog.golang.org/using-go-modules) and always use the latest tagged [release](https://github.com/jbvmio/go-msgraph/releases). You may directly download the source code there, but the preffered way to install and update is with `go get`:
 
 ```shell
 # Initially install
-go get github.com/open-networks/go-msgraph
+go get github.com/jbvmio/go-msgraph
 # Update
-go get -u github.com/open-networks/go-msgraph
+go get -u github.com/jbvmio/go-msgraph
 go mod tidy
 ```
 
 ## Documentation
 
-There is some example code placed in the [docs/](docs/) folder. The code itself is pretty well documented with comments, hence see [http://godoc.org/github.com/open-networks/go-msgraph](http://godoc.org/github.com/open-networks/go-msgraph) or run:
+There is some example code placed in the [docs/](docs/) folder. The code itself is pretty well documented with comments, hence see [http://godoc.org/github.com/jbvmio/go-msgraph](http://godoc.org/github.com/jbvmio/go-msgraph) or run:
 
 ```shell
-godoc github.com/open-networks/go-msgraph
+godoc github.com/jbvmio/go-msgraph
 ```
 
 ## License

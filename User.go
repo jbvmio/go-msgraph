@@ -10,21 +10,30 @@ import (
 
 // User represents a user from the ms graph API
 type User struct {
-	ID                string            `json:"id,omitempty"`
-	BusinessPhones    []string          `json:"businessPhones,omitempty"`
-	DisplayName       string            `json:"displayName,omitempty"`
-	GivenName         string            `json:"givenName,omitempty"`
-	Mail              string            `json:"mail,omitempty"`
-	MobilePhone       string            `json:"mobilePhone,omitempty"`
-	PreferredLanguage string            `json:"preferredLanguage,omitempty"`
-	Surname           string            `json:"surname,omitempty"`
-	UserPrincipalName string            `json:"userPrincipalName,omitempty"`
-	AccountEnabled    bool              `json:"accountEnabled,omitempty"`
-	AssignedLicenses  []AssignedLicense `json:"assignedLicenses,omitempty"`
-	CompanyName       string            `json:"companyName,omitempty"`
-	Department        string            `json:"department,omitempty"`
-	MailNickname      string            `json:"mailNickname,omitempty"`
-	PasswordProfile   PasswordProfile   `json:"passwordProfile,omitempty"`
+	ID                         string            `json:"id,omitempty"`
+	BusinessPhones             []string          `json:"businessPhones,omitempty"`
+	DisplayName                string            `json:"displayName,omitempty"`
+	GivenName                  string            `json:"givenName,omitempty"`
+	Mail                       string            `json:"mail,omitempty"`
+	MobilePhone                string            `json:"mobilePhone,omitempty"`
+	PreferredLanguage          string            `json:"preferredLanguage,omitempty"`
+	Surname                    string            `json:"surname,omitempty"`
+	UserPrincipalName          string            `json:"userPrincipalName,omitempty"`
+	AccountEnabled             bool              `json:"accountEnabled,omitempty"`
+	AssignedLicenses           []AssignedLicense `json:"assignedLicenses"`
+	CompanyName                string            `json:"companyName,omitempty"`
+	Department                 string            `json:"department,omitempty"`
+	MailNickname               string            `json:"mailNickname,omitempty"`
+	PasswordProfile            PasswordProfile   `json:"passwordProfile,omitempty"`
+	AssignedPlans              []AssignedPlan    `json:"assignedPlans"`
+	CreationType               string            `json:"creationType"`
+	OnPremisesSyncEnabled      bool              `json:"onPremisesSyncEnabled"`
+	OtherMails                 []string          `json:"otherMails"`
+	ShowInAddressList          bool              `json:"showInAddressList"`
+	UserType                   string            `json:"userType"`
+	MailboxSettings            MailboxSettings   `json:"mailboxSettings"`
+	LastPasswordChangeDateTime string            `json:"lastPasswordChangeDateTime"`
+	PasswordPolicies           string            `json:"passwordPolicies"`
 
 	activePhone string       // private cache for the active phone number
 	graphClient *GraphClient // the graphClient that called the user
@@ -33,6 +42,21 @@ type User struct {
 type AssignedLicense struct {
 	DisabledPlans []string `json:"disabledPlans,omitempty"`
 	SkuID         string   `json:"skuId,omitempty"`
+}
+
+type AssignedPlan struct {
+	AssignedDateTime string `json:"assignedDateTime"`
+	CapabilityStatus string `json:"capabilityStatus"`
+	Service          string `json:"service"`
+	ServicePlanId    string `json:"servicePlanId"`
+}
+
+type MailboxSettings struct {
+	UserPurpose UserPurpose `json:"userPurpose"`
+}
+
+type UserPurpose struct {
+	Value string `json:"value"`
 }
 
 type PasswordProfile struct {

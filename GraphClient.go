@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -193,12 +194,27 @@ func (g *GraphClient) makeAPICall(apiCall string, httpMethod string, reqParams g
 
 	var getParams = reqParams.Values()
 
-	if httpMethod == http.MethodGet {
+	// Query options $filter, $orderby, $count, $skip, and $top can be applied only on collections
+	if _, isCollection := reqParams.(*listQueryOptions); isCollection {
 		// TODO: Improve performance with using $skip & paging instead of retrieving all results with $top
 		// TODO: MaxPageSize is currently 999, if there are any time more than 999 entries this will make the program unpredictable... hence start to use paging (!)
 		getParams.Add("$top", strconv.Itoa(MaxPageSize))
 	}
 	req.URL.RawQuery = getParams.Encode() // set query parameters
+
+	/*
+		if httpMethod == http.MethodGet {
+			// TODO: Improve performance with using $skip & paging instead of retrieving all results with $top
+			// TODO: MaxPageSize is currently 999, if there are any time more than 999 entries this will make the program unpredictable... hence start to use paging (!)
+			getParams.Add("$top", strconv.Itoa(MaxPageSize))
+		}
+	*/
+
+	/*
+		if strings.Contains(apiCall, "/deviceAppManagement/mobileApps") {
+			return g.performTestRequest(req, v)
+		}
+	*/
 
 	return g.performRequest(req, v)
 }
@@ -221,12 +237,11 @@ func (g *GraphClient) performRequest(req *http.Request, v interface{}) error {
 		// The cause will be described in the body, hence we have to return the body too for proper error-analysis
 		return fmt.Errorf("StatusCode is not OK: %v. Body: %v ", resp.StatusCode, string(body))
 	}
-
-	//fmt.Println("Body: ", string(body))
-
 	if err != nil {
 		return fmt.Errorf("HTTP response read error: %v of http.Request: %v", err, req.URL)
 	}
+
+	fmt.Printf("RawBody: %s\n\n", body)
 
 	// no content returned when http PATCH or DELETE is used, e.g. User.DeleteUser()
 	if req.Method == http.MethodDelete || req.Method == http.MethodPatch {
@@ -235,73 +250,34 @@ func (g *GraphClient) performRequest(req *http.Request, v interface{}) error {
 	return json.Unmarshal(body, &v) // return the error of the json unmarshal
 }
 
-// ListUsers returns a list of all users
-// Supports optional OData query parameters https://docs.microsoft.com/en-us/graph/query-parameters
-//
-// Reference: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/api/user_list
-func (g *GraphClient) ListUsers(opts ...ListQueryOption) (Users, error) {
-	resource := "/users"
-	var marsh struct {
-		Users Users `json:"value"`
+func (g *GraphClient) performTestRequest(req *http.Request, v interface{}) error {
+	httpClient := &http.Client{
+		Timeout: time.Second * 10,
 	}
-	err := g.makeGETAPICall(resource, compileListQueryOptions(opts), &marsh)
-	marsh.Users.setGraphClient(g)
-	return marsh.Users, err
-}
-
-// ListGroups returns a list of all groups
-// Supports optional OData query parameters https://docs.microsoft.com/en-us/graph/query-parameters
-//
-// Reference: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/api/group_list
-func (g *GraphClient) ListGroups(opts ...ListQueryOption) (Groups, error) {
-	resource := "/groups"
-
-	var reqParams = compileListQueryOptions(opts)
-
-	var marsh struct {
-		Groups Groups `json:"value"`
-	}
-	err := g.makeGETAPICall(resource, reqParams, &marsh)
-	marsh.Groups.setGraphClient(g)
-	return marsh.Groups, err
-}
-
-// GetUser returns the user object associated to the given user identified by either
-// the given ID or userPrincipalName
-// Supports optional OData query parameters https://docs.microsoft.com/en-us/graph/query-parameters
-//
-// Reference: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/api/user_get
-func (g *GraphClient) GetUser(identifier string, opts ...GetQueryOption) (User, error) {
-	resource := fmt.Sprintf("/users/%v", identifier)
-	user := User{graphClient: g}
-	err := g.makeGETAPICall(resource, compileGetQueryOptions(opts), &user)
-	return user, err
-}
-
-// GetGroup returns the group object identified by the given groupID.
-// Supports optional OData query parameters https://docs.microsoft.com/en-us/graph/query-parameters
-//
-// Reference: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/api/group_get
-func (g *GraphClient) GetGroup(groupID string, opts ...GetQueryOption) (Group, error) {
-	resource := fmt.Sprintf("/groups/%v", groupID)
-	group := Group{graphClient: g}
-	err := g.makeGETAPICall(resource, compileGetQueryOptions(opts), &group)
-	return group, err
-}
-
-// CreateUser creates a new user given a user object and returns and updated object
-// Reference: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/api/user-post-users
-func (g *GraphClient) CreateUser(userInput User, opts ...CreateQueryOption) (User, error) {
-	user := User{graphClient: g}
-	bodyBytes, err := json.Marshal(userInput)
+	resp, err := httpClient.Do(req)
 	if err != nil {
-		return user, err
+		return fmt.Errorf("HTTP response error: %v of http.Request: %v", err, req.URL)
+	}
+	defer resp.Body.Close() // close body when func returns
+
+	body, err := ioutil.ReadAll(resp.Body) // read body first to append it to the error (if any)
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		// Hint: this will mostly be the case if the tenant ID cannot be found, the Application ID cannot be found or the clientSecret is incorrect.
+		// The cause will be described in the body, hence we have to return the body too for proper error-analysis
+		return fmt.Errorf("StatusCode is not OK: %v. Body: %v ", resp.StatusCode, string(body))
+	}
+	if err != nil {
+		return fmt.Errorf("HTTP response read error: %v of http.Request: %v", err, req.URL)
 	}
 
-	reader := bytes.NewReader(bodyBytes)
-	err = g.makePOSTAPICall("/users", compileCreateQueryOptions(opts), reader, &user)
+	fmt.Printf("%s\n", body)
+	os.Exit(0)
 
-	return user, err
+	// no content returned when http PATCH or DELETE is used, e.g. User.DeleteUser()
+	if req.Method == http.MethodDelete || req.Method == http.MethodPatch {
+		return nil
+	}
+	return json.Unmarshal(body, &v) // return the error of the json unmarshal
 }
 
 // UnmarshalJSON implements the json unmarshal to be used by the json-library.

@@ -112,7 +112,7 @@ var DefaultWin32LobAppReturnCodes = []Win32LobAppReturnCode{
 
 // NewWin32LobApp creates and returns a new Win32LobApp with defaults based on the given intunewin file.
 func NewWin32LobApp(intuneWinFile string) (Win32LobApp, error) {
-	meta, err := GetIntuneWin32AppMetadata(intuneWinFile)
+	meta, err := GetIntuneWin32AppMetadata(intuneWinFile, false)
 	if err != nil {
 		return Win32LobApp{}, err
 	}
@@ -159,40 +159,50 @@ func NewWin32LobApp(intuneWinFile string) (Win32LobApp, error) {
 	return win32LobApp, nil
 }
 
-func GetIntuneWin32AppMetadata(zipFile string) (DetectionXML, error) {
+func GetIntuneWin32AppMetadata(intuneWinFile string, includeData bool) (*DetectionXML, error) {
 	var detectionXML DetectionXML
-	r, err := zip.OpenReader(zipFile)
+	r, err := zip.OpenReader(intuneWinFile)
 	if err != nil {
-		return detectionXML, err
+		return &detectionXML, err
 	}
 	defer r.Close()
 	for _, f := range r.File {
 		if strings.HasSuffix(f.Name, `etection.xml`) {
 			rc, err := f.Open()
 			if err != nil {
-				return detectionXML, fmt.Errorf("unable to open zipped XML: %w", err)
+				return &detectionXML, fmt.Errorf("unable to open compressed XML: %w", err)
 			}
 			defer rc.Close()
 			data, err := ioutil.ReadAll(rc)
 			if err != nil {
-				return detectionXML, fmt.Errorf("unable to read zipped XML: %w", err)
+				return &detectionXML, fmt.Errorf("unable to read compressed XML: %w", err)
 			}
 			err = xml.Unmarshal(data, &detectionXML)
 			if err != nil {
-				return detectionXML, fmt.Errorf("unable to unmarshal XML: %w", err)
+				return &detectionXML, fmt.Errorf("unable to unmarshal XML: %w", err)
 			}
 			break
 		}
 	}
-
 	for _, f := range r.File {
 		if strings.HasSuffix(f.Name, detectionXML.FileName) {
 			detectionXML.EncryptedContentSize = int64(f.CompressedSize64)
+			if includeData {
+				rc, err := f.Open()
+				if err != nil {
+					return &detectionXML, fmt.Errorf("unable to open compressed file: %w", err)
+				}
+				defer rc.Close()
+				data, err := ioutil.ReadAll(rc)
+				if err != nil {
+					return &detectionXML, fmt.Errorf("unable to read compressed file: %w", err)
+				}
+				detectionXML.Data = data
+			}
 			break
 		}
 	}
-
-	return detectionXML, nil
+	return &detectionXML, nil
 }
 
 type DetectionXML struct {
@@ -204,6 +214,7 @@ type DetectionXML struct {
 	SetupFile              string
 	EncryptionInfo         EncryptionInfo
 	MsiInfo                MsiInfo
+	Data                   []byte
 }
 
 func (d *DetectionXML) HasMsiInfo() bool {
@@ -211,13 +222,13 @@ func (d *DetectionXML) HasMsiInfo() bool {
 }
 
 type EncryptionInfo struct {
-	EncryptionKey        string
-	MacKey               string
-	InitializationVector string
-	Mac                  string
-	ProfileIdentifier    string
-	FileDigest           string
-	FileDigestAlgorithm  string
+	EncryptionKey        string `json:"encryptionKey"`
+	MacKey               string `json:"macKey"`
+	InitializationVector string `json:"initializationVector"`
+	Mac                  string `json:"mac"`
+	ProfileIdentifier    string `json:"profileIdentifier"`
+	FileDigest           string `json:"fileDigest"`
+	FileDigestAlgorithm  string `json:"fileDigestAlgorithm"`
 }
 
 type MsiInfo struct {

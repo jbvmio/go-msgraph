@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -143,6 +142,11 @@ func (g *GraphClient) makePOSTAPICall(apiCall string, reqParams getRequestParams
 	return g.makeAPICall(apiCall, http.MethodPost, reqParams, body, v)
 }
 
+// makeGETAPICall performs an API-Call to the msgraph API.
+func (g *GraphClient) makePUTAPICall(apiCall string, reqParams getRequestParams, body io.Reader, v interface{}) error {
+	return g.makeAPICall(apiCall, http.MethodPut, reqParams, body, v)
+}
+
 // makePATCHAPICall performs an API-Call to the msgraph API.
 func (g *GraphClient) makePATCHAPICall(apiCall string, reqParams getRequestParams, body io.Reader, v interface{}) error {
 	return g.makeAPICall(apiCall, http.MethodPatch, reqParams, body, v)
@@ -196,12 +200,8 @@ func (g *GraphClient) makeAPICall(apiCall string, httpMethod string, reqParams g
 
 	// Query options $filter, $orderby, $count, $skip, and $top can be applied only on collections
 	if _, isCollection := reqParams.(*listQueryOptions); isCollection {
-		// TODO: Improve performance with using $skip & paging instead of retrieving all results with $top
-		// TODO: MaxPageSize is currently 999, if there are any time more than 999 entries this will make the program unpredictable... hence start to use paging (!)
 		getParams.Add("$top", strconv.Itoa(MaxPageSize))
 	}
-	req.URL.RawQuery = getParams.Encode() // set query parameters
-
 	/*
 		if httpMethod == http.MethodGet {
 			// TODO: Improve performance with using $skip & paging instead of retrieving all results with $top
@@ -209,13 +209,7 @@ func (g *GraphClient) makeAPICall(apiCall string, httpMethod string, reqParams g
 			getParams.Add("$top", strconv.Itoa(MaxPageSize))
 		}
 	*/
-
-	/*
-		if strings.Contains(apiCall, "/deviceAppManagement/mobileApps") {
-			return g.performTestRequest(req, v)
-		}
-	*/
-
+	req.URL.RawQuery = getParams.Encode() // set query parameters
 	return g.performRequest(req, v)
 }
 
@@ -242,41 +236,17 @@ func (g *GraphClient) performRequest(req *http.Request, v interface{}) error {
 	}
 
 	fmt.Printf("RawBody: %s\n\n", body)
+	fmt.Println("Status:", resp.Status, "Code:", resp.StatusCode)
 
-	// no content returned when http PATCH or DELETE is used, e.g. User.DeleteUser()
+	// Control whether content should be returned by passing nil value for v instead of http Method
+	if v == nil {
+		return nil
+	}
+	/* no content returned when http PATCH or DELETE is used, e.g. User.DeleteUser()
 	if req.Method == http.MethodDelete || req.Method == http.MethodPatch {
 		return nil
 	}
-	return json.Unmarshal(body, &v) // return the error of the json unmarshal
-}
-
-func (g *GraphClient) performTestRequest(req *http.Request, v interface{}) error {
-	httpClient := &http.Client{
-		Timeout: time.Second * 10,
-	}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("HTTP response error: %v of http.Request: %v", err, req.URL)
-	}
-	defer resp.Body.Close() // close body when func returns
-
-	body, err := ioutil.ReadAll(resp.Body) // read body first to append it to the error (if any)
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		// Hint: this will mostly be the case if the tenant ID cannot be found, the Application ID cannot be found or the clientSecret is incorrect.
-		// The cause will be described in the body, hence we have to return the body too for proper error-analysis
-		return fmt.Errorf("StatusCode is not OK: %v. Body: %v ", resp.StatusCode, string(body))
-	}
-	if err != nil {
-		return fmt.Errorf("HTTP response read error: %v of http.Request: %v", err, req.URL)
-	}
-
-	fmt.Printf("%s\n", body)
-	os.Exit(0)
-
-	// no content returned when http PATCH or DELETE is used, e.g. User.DeleteUser()
-	if req.Method == http.MethodDelete || req.Method == http.MethodPatch {
-		return nil
-	}
+	*/
 	return json.Unmarshal(body, &v) // return the error of the json unmarshal
 }
 
@@ -320,4 +290,23 @@ func (g *GraphClient) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("can't get Token: %v", err)
 	}
 	return nil
+}
+
+func (g *GraphClient) performRaw(req *http.Request) (*http.Response, error) {
+	g.makeSureURLsAreSet()
+	g.apiCall.Lock()
+	defer g.apiCall.Unlock() // unlock when the func returns
+	// Check token
+	if g.token.WantsToBeRefreshed() { // Token not valid anymore?
+		err := g.refreshToken()
+		if err != nil {
+			return nil, err
+		}
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", g.token.GetAccessToken())
+	httpClient := &http.Client{
+		Timeout: time.Second * 10,
+	}
+	return httpClient.Do(req)
 }

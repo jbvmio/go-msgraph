@@ -142,11 +142,6 @@ func (g *GraphClient) makePOSTAPICall(apiCall string, reqParams getRequestParams
 	return g.makeAPICall(apiCall, http.MethodPost, reqParams, body, v)
 }
 
-// makeGETAPICall performs an API-Call to the msgraph API.
-func (g *GraphClient) makePUTAPICall(apiCall string, reqParams getRequestParams, body io.Reader, v interface{}) error {
-	return g.makeAPICall(apiCall, http.MethodPut, reqParams, body, v)
-}
-
 // makePATCHAPICall performs an API-Call to the msgraph API.
 func (g *GraphClient) makePATCHAPICall(apiCall string, reqParams getRequestParams, body io.Reader, v interface{}) error {
 	return g.makeAPICall(apiCall, http.MethodPatch, reqParams, body, v)
@@ -292,6 +287,7 @@ func (g *GraphClient) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+/* unused:
 func (g *GraphClient) performRaw(req *http.Request) (*http.Response, error) {
 	g.makeSureURLsAreSet()
 	g.apiCall.Lock()
@@ -310,3 +306,4 @@ func (g *GraphClient) performRaw(req *http.Request) (*http.Response, error) {
 	}
 	return httpClient.Do(req)
 }
+*/

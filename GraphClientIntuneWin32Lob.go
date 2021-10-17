@@ -9,6 +9,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -60,6 +61,12 @@ func (g *GraphClient) GetWin32LobAppContentFile(appID, contentVersionID, content
 	err := g.makeGETAPICall(resource, compileGetQueryOptions(opts), &file)
 	file.setGraphClient(g)
 	return file, err
+}
+
+func (g *GraphClient) DeleteWin32LobApp(appID string) error {
+	resource := fmt.Sprintf("/deviceAppManagement/mobileApps/%s", appID)
+	err := g.makeDELETEAPICall(resource, compileGetQueryOptions([]GetQueryOption{}), nil)
+	return err
 }
 
 func (g *GraphClient) DeleteWin32LobAppContentVersion(appID, contentVersionID string) error {
@@ -130,10 +137,12 @@ func (g *GraphClient) Win32LobAppContentFileUpload(intuneWinFile string, fileCon
 	blockCount := int(math.Ceil(float64(fileSize) / blocksize))
 	doneChan := make(chan error, blockCount)
 	ticker := time.NewTicker(time.Minute * 12)
+	blockIDs := make([]string, blockCount)
 	var errs []error
 	var done int
 	for i := 0; i < blockCount; i++ {
 		blockID := stdBase64Encode(fmt.Sprintf("%04d\n", i))
+		blockIDs[i] = blockID
 		start := i * blocksize
 		stop := (i + 1) * blocksize
 		var block []byte
@@ -166,9 +175,17 @@ uploadLoop:
 	if len(errs) > 0 {
 		return fmt.Errorf("error uploading %d of %d: %v", len(errs), blockCount, errs)
 	}
-	g.Win32LobAppContentFileUploadCommit(xmlMeta.EncryptionInfo, fileContent.Context.AppID, fileContent.Context.ContentVersion, fileContent.ID)
+	err = win32LobAppUploadFinalize(fileContent.AzureStorageUri, blockIDs)
+	if err != nil {
+		return fmt.Errorf("error finalizing upload: %w", err)
+	}
+	err = g.Win32LobAppContentFileUploadCommit(xmlMeta.EncryptionInfo, fileContent.Context.AppID, fileContent.Context.ContentVersion, fileContent.ID)
 	if err != nil {
 		return fmt.Errorf("error committing upload: %w", err)
+	}
+	err = g.Win32LobAppContentFileVersionCommit(fileContent.Context.AppID, fileContent.Context.ContentVersion)
+	if err != nil {
+		return fmt.Errorf("error committing content version: %w", err)
 	}
 	return nil
 }
@@ -197,6 +214,24 @@ func (g *GraphClient) Win32LobAppContentFileUploadCommit(encryptionInfo Encrypti
 	return err
 }
 
+func (g *GraphClient) Win32LobAppContentFileVersionCommit(appID, contentVersionID string) error {
+	resource := fmt.Sprintf("/deviceAppManagement/mobileApps/%s", appID)
+	tmp := struct {
+		ODataType               string `json:"@odata.type"`
+		CommittedContentVersion string `json:"committedContentVersion"`
+	}{
+		ODataType:               `#microsoft.graph.win32LobApp`,
+		CommittedContentVersion: contentVersionID,
+	}
+	bodyBytes, err := json.Marshal(tmp)
+	if err != nil {
+		return err
+	}
+	reader := bytes.NewReader(bodyBytes)
+	err = g.makePATCHAPICall(resource, compileGetQueryOptions([]GetQueryOption{}), reader, nil)
+	return err
+}
+
 func stdBase64Encode(v string) string {
 	return base64.StdEncoding.EncodeToString([]byte(v))
 }
@@ -218,14 +253,40 @@ func win32LobAppUploadBlock(storageURI, blockID string, data []byte, doneChan ch
 		doneChan <- fmt.Errorf("error sending request: %w", err)
 	}
 	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
+	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		doneChan <- fmt.Errorf("error reading response: %w", err)
 	}
-
-	fmt.Println("Status:", resp.Status, "Code:", resp.StatusCode)
-	fmt.Printf("Body: %s\n", b)
+	//fmt.Println("Upload Status:", resp.Status, "Code:", resp.StatusCode)
 	doneChan <- nil
+}
+
+func win32LobAppUploadFinalize(storageURI string, blockIDs []string) error {
+	params := url.Values{}
+	params.Add(`comp`, `blocklist`)
+	U := storageURI + `&` + params.Encode()
+	xml := `<?xml version="1.0" encoding="utf-8"?><BlockList>`
+	for _, id := range blockIDs {
+		xml += fmt.Sprintf("<Latest>%s</Latest>", id)
+	}
+	xml += `</BlockList>`
+	payload := strings.NewReader(xml)
+	req, err := http.NewRequest(`PUT`, U, payload)
+	if err != nil {
+		return fmt.Errorf("error creating request: %w", err)
+	}
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error sending request: %w", err)
+	}
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response: %w", err)
+	}
+	//fmt.Println("Finalize Status:", resp.Status, "Code:", resp.StatusCode)
+	return nil
 }
 
 type FileEncryptionInfo struct {

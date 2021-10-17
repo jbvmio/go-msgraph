@@ -23,7 +23,7 @@ type Win32LobApp struct {
 	IsFeatured                      bool                         `json:"isFeatured,omitempty"`
 	PrivacyInformationUrl           string                       `json:"privacyInformationUrl,omitempty"`
 	InformationUrl                  string                       `json:"informationUrl,omitempty"`
-	Wwner                           string                       `json:"owner,omitempty"`
+	Owner                           string                       `json:"owner,omitempty"`
 	Developer                       string                       `json:"developer,omitempty"`
 	Notes                           string                       `json:"notes,omitempty"`
 	UploadState                     int                          `json:"uploadState,omitempty"`

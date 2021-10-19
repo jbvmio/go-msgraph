@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -230,8 +231,9 @@ func (g *GraphClient) performRequest(req *http.Request, v interface{}) error {
 		return fmt.Errorf("HTTP response read error: %v of http.Request: %v", err, req.URL)
 	}
 
-	fmt.Printf("RawBody: %s\n\n", body)
-	fmt.Println("Status:", resp.Status, "Code:", resp.StatusCode)
+	if !strings.HasSuffix(req.URL.Path, `oauth2/token`) {
+		fmt.Printf("Status: %s Code: %d\nBody: %s\n\n", resp.Status, resp.StatusCode, body)
+	}
 
 	// Control whether content should be returned by passing nil value for v instead of http Method
 	if v == nil {

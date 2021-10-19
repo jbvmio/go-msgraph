@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -121,7 +122,7 @@ func (g *GraphClient) CreateWin32LobAppContentFile(appID, contentVersionID strin
 }
 
 // RenewWin32LobAppContentFileUpload uploads the given intunewin file to given MobileAppContentFile definition.
-func (g *GraphClient) Win32LobAppContentFileUpload(intuneWinFile string, fileContent *MobileAppContentFile) error {
+func (g *GraphClient) Win32LobAppContentFileUpload(intuneWinFile io.Reader, fileContent *MobileAppContentFile) error {
 	const blocksize = 1024 * 1024 * 100
 	if fileContent.AzureStorageUri == "" {
 		return fmt.Errorf("missing AzureStorageURI")

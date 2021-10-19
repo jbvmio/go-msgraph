@@ -3,6 +3,7 @@ package msgraph
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"regexp"
 	"strings"
 	"time"
@@ -46,7 +47,7 @@ type MACFContext struct {
 	ContentVersion string
 }
 
-func (F *MobileAppContentFile) UploadIntuneWin(intuneWinFile string) error {
+func (F *MobileAppContentFile) UploadIntuneWin(intuneWinFile io.Reader) error {
 	return F.graphClient.Win32LobAppContentFileUpload(intuneWinFile, F)
 }
 
@@ -117,3 +118,13 @@ func (F *MobileAppContentFile) setGraphClient(gC *GraphClient) {
 }
 
 type MobileAppContentFileRequest MobileAppContentFile
+
+// NewMobileAppContentFileRequest Creates and returns a new NewMobileAppContentFileRequest
+// with default values detected from the given DetectionXML.
+func NewMobileAppContentFileRequest(xmlMeta *DetectionXML) MobileAppContentFileRequest {
+	return MobileAppContentFileRequest{
+		Name:          xmlMeta.FileName,
+		Size:          xmlMeta.UnencryptedContentSize,
+		SizeEncrypted: xmlMeta.EncryptedContentSize,
+	}
+}

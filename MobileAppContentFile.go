@@ -51,9 +51,16 @@ func (F *MobileAppContentFile) UploadIntuneWin(intuneWinFile io.Reader) error {
 	return F.graphClient.Win32LobAppContentFileUpload(intuneWinFile, F)
 }
 
-func (F *MobileAppContentFile) ContinueWhenStorageReady(timeout time.Duration) error {
+type UploadState string
+
+const (
+	UploadStateStorageReady  UploadState = `azureStorageUriRequestSuccess`
+	UploadStateFileCommitted UploadState = `commitFileSuccess`
+)
+
+func (F *MobileAppContentFile) ContinueOnUploadState(state UploadState, timeout time.Duration) error {
 	F.Refresh()
-	if F.StorageReady() {
+	if F.IsUploadState(state) {
 		return nil
 	}
 	timer := time.NewTimer(timeout)
@@ -64,7 +71,7 @@ func (F *MobileAppContentFile) ContinueWhenStorageReady(timeout time.Duration) e
 			return fmt.Errorf("timed out waiting for storage ready")
 		case <-ticker.C:
 			F.Refresh()
-			if F.StorageReady() {
+			if F.IsUploadState(state) {
 				return nil
 			}
 			switch {
@@ -86,6 +93,10 @@ func (F *MobileAppContentFile) Refresh() error {
 	}
 	*F = tmp
 	return nil
+}
+
+func (F *MobileAppContentFile) IsUploadState(state UploadState) bool {
+	return F.UploadState == string(state) && F.AzureStorageUri != ""
 }
 
 func (F *MobileAppContentFile) StorageReady() bool {

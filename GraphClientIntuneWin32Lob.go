@@ -124,6 +124,10 @@ func (g *GraphClient) CreateWin32LobAppContentFile(appID, contentVersionID strin
 // RenewWin32LobAppContentFileUpload uploads the given intunewin file to given MobileAppContentFile definition.
 func (g *GraphClient) Win32LobAppContentFileUpload(intuneWinFile io.Reader, fileContent *MobileAppContentFile) error {
 	const blocksize = 1024 * 1024 * 100
+	err := fileContent.ContinueOnUploadState(UploadStateStorageReady, time.Minute*1)
+	if err != nil {
+		return fmt.Errorf("az storage wait error (storageReady): %w", err)
+	}
 	if fileContent.AzureStorageUri == "" {
 		return fmt.Errorf("missing AzureStorageURI")
 	}
@@ -183,6 +187,10 @@ uploadLoop:
 	err = g.Win32LobAppContentFileUploadCommit(xmlMeta.EncryptionInfo, fileContent.Context.AppID, fileContent.Context.ContentVersion, fileContent.ID)
 	if err != nil {
 		return fmt.Errorf("error committing upload: %w", err)
+	}
+	err = fileContent.ContinueOnUploadState(UploadStateFileCommitted, time.Minute*1)
+	if err != nil {
+		return fmt.Errorf("az storage wait error (fileCommitted): %w", err)
 	}
 	err = g.Win32LobAppContentFileVersionCommit(fileContent.Context.AppID, fileContent.Context.ContentVersion)
 	if err != nil {

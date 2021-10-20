@@ -37,6 +37,7 @@ func NewWin32LobAppRequest(xmlMeta *DetectionXML) Win32LobAppRequest {
 	if xmlMeta.HasMsiInfo() {
 		win32LobApp.MsiInformation = &Win32LobAppMsiInformation{}
 		win32LobApp.Publisher = xmlMeta.MsiInfo.MsiPublisher
+		win32LobApp.DisplayVersion = xmlMeta.MsiInfo.MsiProductVersion
 		win32LobApp.InstallCommandLine = fmt.Sprintf(`msiexec /%s "%s" /q`, "i", xmlMeta.SetupFile)
 		win32LobApp.UninstallCommandLine = fmt.Sprintf(`msiexec /%s "%s" /q`, "x", xmlMeta.MsiInfo.MsiProductCode)
 		win32LobApp.MsiInformation.ProductName = xmlMeta.Name

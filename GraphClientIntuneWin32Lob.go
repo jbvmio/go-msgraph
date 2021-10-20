@@ -180,6 +180,7 @@ uploadLoop:
 	if len(errs) > 0 {
 		return fmt.Errorf("error uploading %d of %d: %v", len(errs), blockCount, errs)
 	}
+	fileContent.Refresh()
 	err = win32LobAppUploadFinalize(fileContent.AzureStorageUri, blockIDs)
 	if err != nil {
 		return fmt.Errorf("error finalizing upload: %w", err)
@@ -192,6 +193,7 @@ uploadLoop:
 	if err != nil {
 		return fmt.Errorf("az storage wait error (fileCommitted): %w", err)
 	}
+	fileContent.Refresh()
 	err = g.Win32LobAppContentFileVersionCommit(fileContent.Context.AppID, fileContent.Context.ContentVersion)
 	if err != nil {
 		return fmt.Errorf("error committing content version: %w", err)

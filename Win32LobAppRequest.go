@@ -25,7 +25,7 @@ func NewWin32LobAppRequest(xmlMeta *DetectionXML) Win32LobAppRequest {
 		SetupFilePath: xmlMeta.SetupFile,
 		InstallExperience: Win32LobAppInstallExperience{
 			RunAsAccount:          `system`,
-			DeviceRestartBehavior: `suppress`,
+			DeviceRestartBehavior: RestartBasedOnReturnCode,
 		},
 		ApplicableArchitectures:        `x64`,
 		MinimumSupportedWindowsRelease: `1607`,
@@ -58,6 +58,10 @@ func NewWin32LobAppRequest(xmlMeta *DetectionXML) Win32LobAppRequest {
 	return win32LobApp
 }
 
+func (A *Win32LobAppRequest) SetRestartBehavior(rb AppRestartBehavior) {
+	A.InstallExperience.DeviceRestartBehavior = rb
+}
+
 func GetIntuneWin32AppMetadataFromFile(intuneWinFile string, includeData bool) (*DetectionXML, error) {
 	file, err := ioutil.ReadFile(intuneWinFile)
 	if err != nil {
@@ -68,7 +72,6 @@ func GetIntuneWin32AppMetadataFromFile(intuneWinFile string, includeData bool) (
 
 func GetIntuneWin32AppMetadata(intuneWinFile io.Reader, includeData bool) (*DetectionXML, error) {
 	var detectionXML DetectionXML
-	//r, err := zip.OpenReader(intuneWinFile)
 	data, err := ioutil.ReadAll(intuneWinFile)
 	if err != nil {
 		return &detectionXML, err
@@ -78,7 +81,6 @@ func GetIntuneWin32AppMetadata(intuneWinFile io.Reader, includeData bool) (*Dete
 	if err != nil {
 		return &detectionXML, err
 	}
-	//defer r.Close()
 	for _, f := range r.File {
 		if strings.HasSuffix(f.Name, `etection.xml`) {
 			rc, err := f.Open()

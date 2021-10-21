@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+var errStatusAuth error = fmt.Errorf("statusCode 403 authError")
+
 // ListWin32LobApps .
 func (g *GraphClient) ListWin32LobApps(opts ...ListQueryOption) (Win32LobApps, error) {
 	resource := "/deviceAppManagement/mobileApps"
@@ -140,6 +142,9 @@ func (g *GraphClient) Win32LobAppContentFileUpload(intuneWinFile io.Reader, file
 		return fmt.Errorf("file %q is invalid or missing data", intuneWinFile)
 	}
 	blockCount := int(math.Ceil(float64(fileSize) / blocksize))
+
+	fmt.Printf("\n>> %s LEN: %d COUNT: %d SURI: %s\n\n", xmlMeta.Name, len(xmlMeta.Data), blockCount, fileContent.AzureStorageUri)
+
 	doneChan := make(chan error, blockCount)
 	ticker := time.NewTicker(time.Minute * 12)
 	blockIDs := make([]string, blockCount)
@@ -157,7 +162,7 @@ func (g *GraphClient) Win32LobAppContentFileUpload(intuneWinFile io.Reader, file
 		default:
 			block = xmlMeta.Data[start:stop]
 		}
-		go win32LobAppUploadBlock(fileContent.AzureStorageUri, blockID, block, doneChan)
+		go win32LobAppUploadBlock(xmlMeta.Name, fileContent.AzureStorageUri, blockID, block, doneChan)
 	}
 uploadLoop:
 	for {
@@ -181,7 +186,7 @@ uploadLoop:
 		return fmt.Errorf("error uploading %d of %d: %v", len(errs), blockCount, errs)
 	}
 	fileContent.Refresh()
-	err = win32LobAppUploadFinalize(fileContent.AzureStorageUri, blockIDs)
+	err = win32LobAppUploadFinalize(xmlMeta.Name, fileContent.AzureStorageUri, blockIDs)
 	if err != nil {
 		return fmt.Errorf("error finalizing upload: %w", err)
 	}
@@ -247,7 +252,7 @@ func stdBase64Encode(v string) string {
 	return base64.StdEncoding.EncodeToString([]byte(v))
 }
 
-func win32LobAppUploadBlock(storageURI, blockID string, data []byte, doneChan chan error) {
+func win32LobAppUploadBlock(xmlName, storageURI, blockID string, data []byte, doneChan chan error) {
 	params := url.Values{}
 	params.Add(`comp`, `block`)
 	params.Add(`blockid`, blockID)
@@ -256,23 +261,29 @@ func win32LobAppUploadBlock(storageURI, blockID string, data []byte, doneChan ch
 	req, err := http.NewRequest(`PUT`, U, payload)
 	if err != nil {
 		doneChan <- fmt.Errorf("error creating request: %w", err)
+		return
 	}
 	req.Header.Add(`x-ms-blob-type`, `BlockBlob`)
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		doneChan <- fmt.Errorf("error sending request: %w", err)
+		return
 	}
 	defer resp.Body.Close()
 	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		doneChan <- fmt.Errorf("error reading response: %w", err)
+		return
 	}
-	//fmt.Println("Upload Status:", resp.Status, "Code:", resp.StatusCode)
+	fmt.Println(xmlName, "Upload Status:", resp.Status, "Code:", resp.StatusCode, "SURI:", storageURI)
+	if resp.StatusCode == 403 {
+		doneChan <- errStatusAuth
+	}
 	doneChan <- nil
 }
 
-func win32LobAppUploadFinalize(storageURI string, blockIDs []string) error {
+func win32LobAppUploadFinalize(xmlName, storageURI string, blockIDs []string) error {
 	params := url.Values{}
 	params.Add(`comp`, `blocklist`)
 	U := storageURI + `&` + params.Encode()
@@ -296,7 +307,11 @@ func win32LobAppUploadFinalize(storageURI string, blockIDs []string) error {
 	if err != nil {
 		return fmt.Errorf("error reading response: %w", err)
 	}
-	//fmt.Println("Finalize Status:", resp.Status, "Code:", resp.StatusCode)
+	fmt.Println(xmlName, "Finalize XML:", xml)
+	fmt.Println(xmlName, "Finalize Status:", resp.Status, "Code:", resp.StatusCode, "SURI:", storageURI)
+	if resp.StatusCode == 403 {
+		return errStatusAuth
+	}
 	return nil
 }
 

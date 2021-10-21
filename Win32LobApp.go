@@ -1,6 +1,8 @@
 package msgraph
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Win32LobApps is a collection of Win32LobApp.
 type Win32LobApps []Win32LobApp
@@ -103,8 +105,8 @@ type Win32LobAppMsiInformation struct {
 }
 
 type Win32LobAppInstallExperience struct {
-	RunAsAccount          string `json:"runAsAccount"`
-	DeviceRestartBehavior string `json:"deviceRestartBehavior"`
+	RunAsAccount          string             `json:"runAsAccount"`
+	DeviceRestartBehavior AppRestartBehavior `json:"deviceRestartBehavior"`
 }
 
 type Win32LobAppReturnCode struct {
@@ -122,6 +124,10 @@ var DefaultWin32LobAppReturnCodes = []Win32LobAppReturnCode{
 	{
 		ReturnCode: 0,
 		Type:       `success`,
+	},
+	{
+		ReturnCode: 1,
+		Type:       `failed`,
 	},
 	{
 		ReturnCode: 1707,

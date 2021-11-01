@@ -104,8 +104,9 @@ type Win32LobAppMsiInformation struct {
 	Publisher      string `json:"publisher"`
 }
 
+// Contains installation experience properties for a Win32 App.
 type Win32LobAppInstallExperience struct {
-	RunAsAccount          string             `json:"runAsAccount"`
+	RunAsAccount          string             `json:"runAsAccount"` // system or user
 	DeviceRestartBehavior AppRestartBehavior `json:"deviceRestartBehavior"`
 }
 

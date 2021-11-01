@@ -3,6 +3,7 @@ package msgraph
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 type AppRestartBehavior int
@@ -23,6 +24,25 @@ var appRestartBehaviorStrings = [...]string{
 	`allow`,
 	`suppress`,
 	`force`,
+}
+
+// ParseAppRestartBehavior takes the given string and attempts to match it to a corresponding
+// AppRestartBehavior ID. If the parse is unsuccessful, the default returned AppRestartBehavior
+// will be of 0 (RestartBasedOnReturnCode).
+func ParseAppRestartBehavior(v string) AppRestartBehavior {
+	var rb AppRestartBehavior
+	val := strings.ToLower(v)
+	switch val {
+	case `basedonreturncode`:
+		rb = RestartBasedOnReturnCode
+	case `allow`:
+		rb = RestartAllow
+	case `suppress`:
+		rb = RestartSuppress
+	case `force`:
+		rb = RestartForce
+	}
+	return rb
 }
 
 func (A *AppRestartBehavior) UnmarshalJSON(data []byte) error {

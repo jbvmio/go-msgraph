@@ -253,6 +253,28 @@ func stdBase64Encode(v string) string {
 }
 
 func win32LobAppUploadBlock(xmlName, storageURI, blockID string, data []byte, doneChan chan error) {
+	var count int
+	client := http.Client{}
+	err := win32UploadBlock(xmlName, storageURI, blockID, data, &client)
+retryLoop:
+	for err != nil {
+		switch err {
+		case errStatusAuth:
+			if count >= 3 {
+				break retryLoop
+			}
+			count++
+			fmt.Println("Received 403 Auth Error, Retrying, Attempt:", count)
+			time.Sleep(time.Second * 2)
+			err = win32UploadBlock(xmlName, storageURI, blockID, data, &client)
+		default:
+			break retryLoop
+		}
+	}
+	doneChan <- err
+}
+
+func win32UploadBlock(xmlName, storageURI, blockID string, data []byte, client *http.Client) error {
 	params := url.Values{}
 	params.Add(`comp`, `block`)
 	params.Add(`blockid`, blockID)
@@ -260,27 +282,19 @@ func win32LobAppUploadBlock(xmlName, storageURI, blockID string, data []byte, do
 	payload := bytes.NewReader(data)
 	req, err := http.NewRequest(`PUT`, U, payload)
 	if err != nil {
-		doneChan <- fmt.Errorf("error creating request: %w", err)
-		return
+		return fmt.Errorf("error creating request: %w", err)
 	}
 	req.Header.Add(`x-ms-blob-type`, `BlockBlob`)
-	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		doneChan <- fmt.Errorf("error sending request: %w", err)
-		return
+		return fmt.Errorf("error sending request: %w", err)
 	}
 	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		doneChan <- fmt.Errorf("error reading response: %w", err)
-		return
-	}
 	fmt.Println(xmlName, "Upload Status:", resp.Status, "Code:", resp.StatusCode, "SURI:", storageURI)
 	if resp.StatusCode == 403 {
-		doneChan <- errStatusAuth
+		return errStatusAuth
 	}
-	doneChan <- nil
+	return nil
 }
 
 func win32LobAppUploadFinalize(xmlName, storageURI string, blockIDs []string) error {
